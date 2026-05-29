@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>BotMaster — Проблема</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #020308; 
+            color: #fff; 
+            font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+            overflow: hidden; 
+            height: 100vh; 
+            width: 100vw; 
+        }
+        canvas { 
+            position: fixed; 
+            top: 0; left: 0; 
+            z-index: 0; 
+        }
+        /* Зелёная земля */
+        .ground {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 25vh;
+            background: linear-gradient(180deg, #2d4a2d 0%, #1a2f1a 100%);
+            border-radius: 50% 50% 0 0 / 20px 20px 0 0;
+            z-index: 2;
+            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
+        }
+        /* Сакуры */
+        .sakura {
+            position: absolute;
+            bottom: 18vh;
+            z-index: 3;
+            pointer-events: none;
+        }
+        .sakura-left {
+            left: 5%;
+            width: 120px;
+            height: 180px;
+        }
+        .sakura-right {
+            right: 5%;
+            width: 140px;
+            height: 200px;
+        }
+        .sakura-center {
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 150px;
+            bottom: 16vh;
+        }
+        /* Текст по центру */
+        .overlay-text {
+            position: absolute;
+            top: 28%;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+            pointer-events: none;
+            user-select: none;
+            width: 90%;
+            text-shadow: 0 4px 20px rgba(0,0,0,0.7);
+        }
+        h1 { 
+            font-size: clamp(2rem, 6vw, 3.5rem); 
+            font-weight: 700; 
+            margin-bottom: 1rem; 
+            color: #e0d8cc; 
+        }
+        p { 
+            font-size: clamp(1rem, 3vw, 1.4rem); 
+            color: #a09888; 
+            line-height: 1.5; 
+        }
+        .scroll-hint {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: #c0d0b0;
+            font-size: 0.9rem;
+            z-index: 10;
+            pointer-events: none;
+            user-select: none;
+            animation: float 2.5s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateX(-50%) translateY(0); opacity: 0.6; }
+            50% { transform: translateX(-50%) translateY(-8px); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="skyCanvas"></canvas>
+    
+    <div class="ground"></div>
+    
+    <!-- Сакуры (статичные) -->
+    <div class="sakura sakura-left">
+        <svg viewBox="0 0 120 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Ствол -->
+            <path d="M60 180 Q55 120 45 70 Q40 40 30 20" stroke="#5C3A2E" stroke-width="10" stroke-linecap="round"/>
+            <path d="M45 70 Q30 50 15 40" stroke="#5C3A2E" stroke-width="5" stroke-linecap="round"/>
+            <path d="M50 100 Q70 80 85 60" stroke="#5C3A2E" stroke-width="4" stroke-linecap="round"/>
+            <!-- Крона (розовые облака) -->
+            <circle cx="30" cy="20" r="22" fill="#F4A7B9" opacity="0.8"/>
+            <circle cx="45" cy="45" r="28" fill="#F4A7B9" opacity="0.85"/>
+            <circle cx="15" cy="40" r="18" fill="#F4A7B9" opacity="0.8"/>
+            <circle cx="60" cy="60" r="20" fill="#F4A7B9" opacity="0.7"/>
+            <circle cx="80" cy="55" r="16" fill="#F4A7B9" opacity="0.7"/>
+            <circle cx="35" cy="35" r="15" fill="#F9C9D5" opacity="0.9"/>
+        </svg>
+    </div>
+    <div class="sakura sakura-right">
+        <svg viewBox="0 0 140 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M70 200 Q65 130 55 80 Q50 50 40 25" stroke="#5C3A2E" stroke-width="12" stroke-linecap="round"/>
+            <path d="M55 80 Q40 60 20 50" stroke="#5C3A2E" stroke-width="6" stroke-linecap="round"/>
+            <path d="M60 110 Q80 90 95 70" stroke="#5C3A2E" stroke-width="5" stroke-linecap="round"/>
+            <circle cx="40" cy="25" r="25" fill="#F4A7B9" opacity="0.8"/>
+            <circle cx="55" cy="55" r="32" fill="#F4A7B9" opacity="0.85"/>
+            <circle cx="20" cy="50" r="20" fill="#F4A7B9" opacity="0.8"/>
+            <circle cx="70" cy="70" r="22" fill="#F4A7B9" opacity="0.7"/>
+            <circle cx="90" cy="65" r="18" fill="#F4A7B9" opacity="0.7"/>
+            <circle cx="45" cy="40" r="18" fill="#F9C9D5" opacity="0.9"/>
+        </svg>
+    </div>
+    <div class="sakura sakura-center">
+        <svg viewBox="0 0 100 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 150 Q48 100 42 60 Q38 35 30 15" stroke="#5C3A2E" stroke-width="8" stroke-linecap="round"/>
+            <path d="M42 60 Q30 45 18 35" stroke="#5C3A2E" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="30" cy="15" r="18" fill="#F4A7B9" opacity="0.8"/>
+            <circle cx="42" cy="40" r="24" fill="#F4A7B9" opacity="0.85"/>
+            <circle cx="18" cy="35" r="15" fill="#F4A7B9" opacity="0.8"/>
+            <circle cx="55" cy="50" r="16" fill="#F4A7B9" opacity="0.7"/>
+            <circle cx="35" cy="30" r="12" fill="#F9C9D5" opacity="0.9"/>
+        </svg>
+    </div>
+
+    <div class="overlay-text">
+        <h1>Твой бизнес тонет<br>в личных сообщениях?</h1>
+        <p>Ты разрываешься между творчеством<br>и бесконечной рутиной.</p>
+    </div>
+    <div class="scroll-hint">Увидеть решение ↓</div>
+
+    <script>
+        (function() {
+            const canvas = document.getElementById('skyCanvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let stars = [];
+            const STAR_COUNT = 350;
+            // Массив падающих звёзд
+            let shootingStars = [];
+            const MAX_SHOOTING_STARS = 4; // одновременно не более 4
+
+            function initStars() {
+                stars = [];
+                for (let i = 0; i < STAR_COUNT; i++) {
+                    stars.push({
+                        x: Math.random() * width,
+                        y: Math.random() * height * 0.7,
+                        baseSize: Math.random() * 2.5 + 0.5,
+                        brightness: Math.random(),
+                        speed: Math.random() * 0.02 + 0.005,
+                        direction: Math.random() < 0.5 ? 1 : -1,
+                        hue: Math.random() < 0.1 ? 220 : 0,
+                    });
+                }
+            }
+
+            function drawStarShape(ctx, x, y, size, alpha) {
+                const innerRadius = size * 0.2;
+                const outerRadius = size;
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.globalAlpha = alpha;
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i * Math.PI) / 2;
+                    const dx = Math.cos(angle);
+                    const dy = Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(dx * innerRadius, dy * innerRadius);
+                    ctx.lineTo(dx * outerRadius, dy * outerRadius);
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = size * 0.3;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i * Math.PI) / 2 + Math.PI / 4;
+                    const dx = Math.cos(angle);
+                    const dy = Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(dx * innerRadius * 0.6, dy * innerRadius * 0.6);
+                    ctx.lineTo(dx * outerRadius * 0.5, dy * outerRadius * 0.5);
+                    ctx.lineWidth = size * 0.15;
+                    ctx.stroke();
+                }
+                const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.8);
+                gradient.addColorStop(0, `rgba(255, 255, 255, 1)`);
+                gradient.addColorStop(1, `rgba(255, 255, 255, 0)`);
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                ctx.arc(0, 0, size * 0.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function createShootingStar() {
+                // Случайная стартовая позиция в верхней половине неба
+                const startX = Math.random() * width * 0.8 + width * 0.1;
+                const startY = Math.random() * height * 0.4;
+                // Случайное направление: медленное движение вниз и в сторону
+                const angle = Math.random() * Math.PI * 0.6 + Math.PI * 0.2; // угол от 36° до 108° относительно горизонтали вправо
+                const speed = 80 + Math.random() * 70; // пикселей в секунду
+                const vx = Math.cos(angle) * speed;
+                const vy = Math.sin(angle) * speed;
+                const life = 1.0;
+                const decay = 0.1 + Math.random() * 0.15; // будет угасать примерно 6-10 секунд
+                const length = 60 + Math.random() * 50;
+                
+                return {
+                    x: startX,
+                    y: startY,
+                    vx: vx,
+                    vy: vy,
+                    life: life,
+                    decay: decay,
+                    length: length,
+                };
+            }
+
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+                initStars();
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            // Добавляем начальные падающие звёзды
+            for (let i = 0; i < 2; i++) {
+                shootingStars.push(createShootingStar());
+            }
+
+            function animate(timestamp) {
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = '#020308';
+                ctx.fillRect(0, 0, width, height);
+                const nebulaGrad = ctx.createLinearGradient(0, 0, width * 0.7, height);
+                nebulaGrad.addColorStop(0, 'rgba(20, 25, 45, 0.5)');
+                nebulaGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+                ctx.fillStyle = nebulaGrad;
+                ctx.fillRect(0, 0, width, height);
+
+                // Рисуем звёзды
+                stars.forEach(star => {
+                    star.brightness += star.speed * star.direction;
+                    if (star.brightness >= 1.0) { star.brightness = 1.0; star.direction = -1; }
+                    else if (star.brightness <= 0.15) { star.brightness = 0.15; star.direction = 1; }
+                    const alpha = star.brightness * 0.9;
+                    const size = star.baseSize;
+                    if (star.hue === 220) {
+                        ctx.fillStyle = `rgba(170, 200, 255, ${alpha})`;
+                        ctx.beginPath();
+                        ctx.arc(star.x, star.y, size * 0.8, 0, Math.PI * 2);
+                        ctx.fill();
+                    } else {
+                        drawStarShape(ctx, star.x, star.y, size, alpha);
+                    }
+                });
+
+                // Обновляем и рисуем падающие звёзды
+                const delta = 0.016; // примерно 60 fps
+                shootingStars = shootingStars.filter(star => {
+                    star.life -= star.decay * delta;
+                    if (star.life <= 0 || star.y > height * 0.9 || star.x < -50 || star.x > width + 50) {
+                        return false; // удаляем
+                    }
+                    
+                    // Рисуем хвост
+                    const tailX = star.x - star.vx * star.length * star.life * 0.015;
+                    const tailY = star.y - star.vy * star.length * star.life * 0.015;
+                    
+                    const gradient = ctx.createLinearGradient(star.x, star.y, tailX, tailY);
+                    gradient.addColorStop(0, `rgba(255, 255, 255, ${star.life})`);
+                    gradient.addColorStop(0.5, `rgba(255, 230, 150, ${star.life * 0.7})`);
+                    gradient.addColorStop(1, `rgba(255, 200, 50, 0)`);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(star.x, star.y);
+                    ctx.lineTo(tailX, tailY);
+                    ctx.strokeStyle = gradient;
+                    ctx.lineWidth = 2.5;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                    
+                    // Голова звезды
+                    ctx.shadowColor = 'rgba(255, 255, 255, 0.9)';
+                    ctx.shadowBlur = 15;
+                    ctx.fillStyle = `rgba(255, 255, 255, ${star.life})`;
+                    ctx.beginPath();
+                    ctx.arc(star.x, star.y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    
+                    drawStarShape(ctx, star.x, star.y, 5, star.life * 0.9);
+                    
+                    // Движение
+                    star.x += star.vx * delta;
+                    star.y += star.vy * delta;
+                    
+                    return true;
+                });
+                
+                // Поддерживаем количество звёзд
+                if (shootingStars.length < MAX_SHOOTING_STARS && Math.random() < 0.02) {
+                    shootingStars.push(createShootingStar());
+                }
+
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+        })();
+    </script>
+</body>
+</html>
